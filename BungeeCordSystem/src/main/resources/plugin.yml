@@ -1,0 +1,4 @@
+name: BungeeSystem
+version: ${project.version}
+main: me.localserver.bungeesystem.BungeeSystem
+description: BungeeSystem
