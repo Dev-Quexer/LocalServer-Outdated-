@@ -29,7 +29,7 @@ public final class BungeeSystem extends Plugin {
     }
     private void initStrings() {
         setPrefix("§8✖ §aSystem §8§l➜ ");
-        setNoPerms(getPrefix()+"§cDazu hast du keine Rechte§8!");
+        setNoPerms(getPrefix()+"§cDazu hast du keine Rechte§8! ");
     }
     private void initCommands() {
 
