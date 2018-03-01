@@ -1,0 +1,9 @@
+name: ServerAPI
+version: ${project.version}
+main: me.quexer.serverapi.ServerAPI
+authors: [Quexer]
+description: ServerAPI
+depend: [CloudNetAPI]
+commands:
+  nick:
+

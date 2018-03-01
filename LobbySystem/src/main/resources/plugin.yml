@@ -1,0 +1,10 @@
+name: Lobby
+version: ${project.version}
+main: me.quexer.lobbysystem.Lobby
+authors: [Quexer]
+description: LobbySystem
+softdepend: [CloudNetAPI, ServerAPI]
+depend: [CloudNetAPI, ServerAPI]
+commands:
+  setLoc:
+  build:
