@@ -1,6 +1,7 @@
 package me.quexer.serverapi.game;
 
 import de.dytanic.cloudnet.bridge.CloudServer;
+import de.dytanic.cloudnet.lib.server.ServerState;
 
 public class GameAPI {
 
@@ -13,6 +14,7 @@ public class GameAPI {
         setMap(map);
         setPlayerXPlayer(PlayerXPlayer);
         CloudServer.getInstance().setMotdAndUpdate(map+"-"+PlayerXPlayer);
+        CloudServer.getInstance().setServerState(ServerState.LOBBY);
     }
 
     public GameState getGameState() {
@@ -20,6 +22,9 @@ public class GameAPI {
     }
 
     public void setGameState(GameState gameState) {
+        if(gameState == GameState.PREINGAME) {
+            CloudServer.getInstance().setServerState(ServerState.INGAME);
+        }
         this.gameState = gameState;
     }
 

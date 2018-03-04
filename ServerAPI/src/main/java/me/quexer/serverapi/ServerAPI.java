@@ -1,6 +1,7 @@
 package me.quexer.serverapi;
 
 import me.quexer.serverapi.api.LocationAPI;
+import me.quexer.serverapi.api.inventory.InventoryHandler;
 import me.quexer.serverapi.coins.CoinsAPI;
 import me.quexer.serverapi.coins.CoinsCMD;
 import me.quexer.serverapi.manager.SoundManager;
@@ -9,6 +10,7 @@ import me.quexer.serverapi.nick.commands.NickCMD;
 import me.quexer.serverapi.database.AsyncMySQL;
 import me.quexer.serverapi.nick.listener.NickListener;
 import me.quexer.serverapi.rank.Tablist;
+import me.quexer.serverapi.rank.commands.SetTopCMD;
 import me.quexer.serverapi.rank.listener.PrefixListener;
 import me.quexer.serverapi.stats.QuickSG;
 import org.bukkit.Bukkit;
@@ -35,6 +37,7 @@ public final class ServerAPI extends JavaPlugin {
     private static QuickSG quickSG;
     private static String nickPrefix;
     private static SoundManager soundManager;
+    private static InventoryHandler inventoryHandler;
 
 
 
@@ -87,6 +90,9 @@ public final class ServerAPI extends JavaPlugin {
             Tablist.setPrefix(all);
         }
         ServerAPI.getMySQL().update("CREATE TABLE IF NOT EXISTS CoinsAPI(UUID VARCHAR(100), COINS VARCHAR(200))");
+        getQuickSG().loadTop();
+        System.out.println("dsadas");
+        setInventoryHandler(new InventoryHandler());
     }
     private void initTables() {
         Bukkit.getScheduler().runTaskAsynchronously(this, () ->{
@@ -116,6 +122,7 @@ public final class ServerAPI extends JavaPlugin {
     private void initCommands() {
         Bukkit.getPluginCommand("nick").setExecutor(new NickCMD());
         Bukkit.getPluginCommand("coins").setExecutor(new CoinsCMD());
+        Bukkit.getPluginCommand("top").setExecutor(new SetTopCMD());
 
     }
     private void initStrings() {
@@ -169,5 +176,13 @@ public final class ServerAPI extends JavaPlugin {
 
     public static void setSoundManager(SoundManager soundManager) {
         ServerAPI.soundManager = soundManager;
+    }
+
+    public static InventoryHandler getInventoryHandler() {
+        return inventoryHandler;
+    }
+
+    public static void setInventoryHandler(InventoryHandler inventoryHandler) {
+        ServerAPI.inventoryHandler = inventoryHandler;
     }
 }

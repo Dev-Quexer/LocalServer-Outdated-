@@ -7,4 +7,5 @@ depend: [CloudNetAPI]
 commands:
   nick:
   coins:
+  top:
 
