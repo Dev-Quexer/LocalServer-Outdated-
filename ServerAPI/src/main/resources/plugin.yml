@@ -6,4 +6,5 @@ description: ServerAPI
 depend: [CloudNetAPI]
 commands:
   nick:
+  coins:
 

@@ -3,23 +3,23 @@ package me.quexer.lobbysystem;
 import de.dytanic.cloudnet.bridge.CloudServer;
 import me.quexer.lobbysystem.commands.BuildCMD;
 import me.quexer.lobbysystem.commands.setLocCMD;
-import me.quexer.lobbysystem.listeners.Cancel;
-import me.quexer.lobbysystem.listeners.JoinQuit;
-import me.quexer.lobbysystem.listeners.Navigator;
+import me.quexer.lobbysystem.gadgets.GadgetsAPI;
+import me.quexer.lobbysystem.gadgets.listeners.GadgetsListener;
+import me.quexer.lobbysystem.listeners.*;
 import me.quexer.lobbysystem.utils.InventoryManager;
+import me.quexer.lobbysystem.utils.LocationManager;
 import me.quexer.serverapi.ServerAPI;
-import me.quexer.serverapi.api.FlyingItems;
 import me.quexer.serverapi.api.Hologramm;
-import me.quexer.serverapi.api.ItemBuilder;
-import me.quexer.serverapi.api.LocationAPI;
 import me.quexer.serverapi.game.GameAPI;
 import me.quexer.serverapi.nick.NickAPI;
-import me.quexer.serverapi.rank.Tablist;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,13 +27,20 @@ import java.util.List;
 public final class Lobby extends JavaPlugin {
 
     private static String prefix;
-    private static FlyingItems spawnHologramm;
-    private static FlyingItems quickSGHologramm;
+
     private static Location spawnLocation;
     private static Location quickSGLocation;
+    private static Location chestHologrammLocation;
+    private static Location chestLocation;
+    private static Hologramm chestHologramm;
+    private static Location chestrollLocation;
     private static InventoryManager inventoryManager;
+    private static LocationManager locationManager;
+    private static GadgetsAPI gadgetsAPI;
     private static Lobby instance;
     private static List<Player> build;
+
+
 
     @Override
     public void onEnable() {
@@ -46,36 +53,11 @@ public final class Lobby extends JavaPlugin {
             new GameAPI("Lobby", "25x1");
             CloudServer.getInstance().setMaxPlayersAndUpdate(25);
         }, 40);
-        Bukkit.getScheduler().runTaskTimerAsynchronously(getInstance(), new Runnable() {
-            @Override
-            public void run() {
-                     getSpawnHologramm().remove();
-                     getQuickSGHologramm().remove();
-                     getSpawnHologramm().spawn();
-                     getQuickSGHologramm().spawn();
-            }
-        },20*3, 20*60*2);
-        if(ServerAPI.getLocationAPI().exist("Lobby.Spawn")) {
-            setSpawnLocation(ServerAPI.getLocationAPI().getLocation("Lobby.Spawn"));
-        }
-        if(ServerAPI.getLocationAPI().exist("Lobby.QuickSG")) {
-            setQuickSGLocation(ServerAPI.getLocationAPI().getLocation("Lobby.QuickSG"));
-        }
-        if(getQuickSGLocation() != null) {
-            setQuickSGHologramm(new FlyingItems());
-            getQuickSGHologramm().setMaterial(new ItemBuilder(Material.CHEST).toItemStack());
-            getQuickSGHologramm().setLocation(getQuickSGLocation());
-            getQuickSGHologramm().setText("§eSurvivalGames §7in schnell");
-            getQuickSGHologramm().spawn();
-        }
-        if(getSpawnLocation() != null) {
-            setSpawnHologramm(new FlyingItems());
-            getSpawnHologramm().setMaterial(new ItemBuilder(Material.MAGMA_CREAM).toItemStack());
-            getSpawnHologramm().setLocation(getSpawnLocation());
-            getSpawnHologramm().setText("§7Hier joinen die §eSpieler");
-            getSpawnHologramm().spawn();
 
-        }
+
+        initLocations();
+        Bukkit.getMessenger().registerOutgoingPluginChannel(getInstance(), "BungeeCord");
+
 
     }
 
@@ -94,11 +76,9 @@ public final class Lobby extends JavaPlugin {
         setInstance(this);
         initConfig();
         initStrings();
-        initLocations();
-        initHologramms();
         initCommands();
         initListeners();
-
+        setGadgetsAPI(new GadgetsAPI());
         Bukkit.setDefaultGameMode(GameMode.ADVENTURE);
         for (World world : Bukkit.getWorlds()) {
             world.setAmbientSpawnLimit(0);
@@ -110,7 +90,8 @@ public final class Lobby extends JavaPlugin {
         }
         setBuild(new ArrayList<>());
         setInventoryManager(new InventoryManager());
-
+        getGadgetsAPI().startScheduler();
+        ServerAPI.getMySQL().update("CREATE TABLE IF NOT EXISTS GadgetsAPI(UUID VARCHAR(100), ACTIVE VARCHAR(100), HERZEN INT, FLAMES INT, NOTES INT, SMOKE INT, CLOUD INT, LAVA INT, THUNDER INT, RAINBOW INT, ENDER INT, MAGIC INT, CIRT INT, BOWFIRE INT)");
     }
     private void initConfig() {
         getConfig().options().header("CommunityPlugin von Quexer :)");
@@ -124,6 +105,12 @@ public final class Lobby extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new JoinQuit(), this);
         Bukkit.getPluginManager().registerEvents(new Cancel(), this);
         Bukkit.getPluginManager().registerEvents(new Navigator(), this);
+        Bukkit.getPluginManager().registerEvents(new SpielerVerstecken(), this);
+        Bukkit.getPluginManager().registerEvents(new ItemHeld(), this);
+        Bukkit.getPluginManager().registerEvents(new NickLobbyListener(), this);
+        Bukkit.getPluginManager().registerEvents(new LobbySwitcher(), this);
+        Bukkit.getPluginManager().registerEvents(new GadgetsListener(), this);
+        Bukkit.getPluginManager().registerEvents(new JumpPads(), this);
     }
 
     private void initCommands() {
@@ -137,27 +124,64 @@ public final class Lobby extends JavaPlugin {
 
 
     private void initLocations() {
+        if(ServerAPI.getLocationAPI().exist("Lobby.Spawn")) {
+            setSpawnLocation(ServerAPI.getLocationAPI().getLocation("Lobby.Spawn"));
+        }
+        if(ServerAPI.getLocationAPI().exist("Lobby.QuickSG")) {
+            setQuickSGLocation(ServerAPI.getLocationAPI().getLocation("Lobby.QuickSG"));
+        }
+        if(ServerAPI.getLocationAPI().exist("Lobby.Chest")) {
+            setChestLocation(ServerAPI.getLocationAPI().getLocation("Lobby.Chest"));
+        }
+        if(ServerAPI.getLocationAPI().exist("Lobby.Chestholo")) {
+            setChestHologrammLocation(ServerAPI.getLocationAPI().getLocation("Lobby.Chestholo"));
+        }
+        if(ServerAPI.getLocationAPI().exist("Lobby.Chestroll")) {
+            setChestrollLocation(ServerAPI.getLocationAPI().getLocation("Lobby.Chestroll"));
+            setChestHologramm(new Hologramm(getChestHologrammLocation(), Arrays.asList("§8§l➡ §7§lHier ist der §e§lChest§7-§e§lRoll","§a§l", "§7§lÖffne eine §e§lKiste §7§lum §4Gadgets §7§lzu erhalten","§7§lEine §e§lKiste §7kostet §e5§7.§e000 §e§lCoins")));
+            getChestrollLocation().subtract(0, 1,0).getBlock().setType(Material.ENDER_CHEST);
+        }
+        setLocationManager(new LocationManager(getSpawnLocation(), getQuickSGLocation(), getChestLocation()));
 
 
     }
-    private void initHologramms() {
+    public static void connect(String message, Player p) {
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(b);
 
+        try {
+            out.writeUTF("Connect");
+            out.writeUTF(message);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        p.sendPluginMessage(getInstance(), "BungeeCord", b.toByteArray());
     }
 
     public static void setPrefix(String prefix) {
         Lobby.prefix = prefix;
     }
 
-    public static FlyingItems getSpawnHologramm() {
-        return spawnHologramm;
+    public static LocationManager getLocationManager() {
+        return locationManager;
     }
 
-    public static void setSpawnHologramm(FlyingItems spawnHologramm) {
-        Lobby.spawnHologramm = spawnHologramm;
+    public static void setLocationManager(LocationManager locationManager) {
+        Lobby.locationManager = locationManager;
     }
 
     public static Location getSpawnLocation() {
         return spawnLocation;
+    }
+
+    public static GadgetsAPI getGadgetsAPI() {
+        return gadgetsAPI;
+    }
+
+    public static void setGadgetsAPI(GadgetsAPI gadgetsAPI) {
+        Lobby.gadgetsAPI = gadgetsAPI;
     }
 
     public static void setSpawnLocation(Location spawnLocation) {
@@ -175,12 +199,12 @@ public final class Lobby extends JavaPlugin {
         Lobby.instance = instance;
     }
 
-    public static FlyingItems getQuickSGHologramm() {
-        return quickSGHologramm;
+    public static Location getChestLocation() {
+        return chestLocation;
     }
 
-    public static void setQuickSGHologramm(FlyingItems quickSGHologramm) {
-        Lobby.quickSGHologramm = quickSGHologramm;
+    public static void setChestLocation(Location chestLocation) {
+        Lobby.chestLocation = chestLocation;
     }
 
     public static Location getQuickSGLocation() {
@@ -205,5 +229,29 @@ public final class Lobby extends JavaPlugin {
 
     public static void setBuild(List<Player> build) {
         Lobby.build = build;
+    }
+
+    public static Hologramm getChestHologramm() {
+        return chestHologramm;
+    }
+
+    public static void setChestHologramm(Hologramm chestHologramm) {
+        Lobby.chestHologramm = chestHologramm;
+    }
+
+    public static Location getChestrollLocation() {
+        return chestrollLocation;
+    }
+
+    public static void setChestrollLocation(Location chestrollLocation) {
+        Lobby.chestrollLocation = chestrollLocation;
+    }
+
+    public static Location getChestHologrammLocation() {
+        return chestHologrammLocation;
+    }
+
+    public static void setChestHologrammLocation(Location chestHologrammLocation) {
+        Lobby.chestHologrammLocation = chestHologrammLocation;
     }
 }

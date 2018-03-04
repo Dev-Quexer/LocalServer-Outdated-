@@ -1,5 +1,7 @@
 package me.quexer.lobbysystem.listeners;
 
+import me.quexer.lobbysystem.Lobby;
+import me.quexer.lobbysystem.commands.BuildCMD;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -27,7 +29,7 @@ public class Cancel implements Listener {
     }
     @EventHandler
     public void onBuild(BlockPlaceEvent e) {
-        if(!e.getPlayer().hasPermission("build")) {
+        if(!Lobby.getBuild().contains(e.getPlayer())) {
             e.setCancelled(true);
             e.setBuild(false);
         }
@@ -35,7 +37,7 @@ public class Cancel implements Listener {
     }
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
-        if(!e.getPlayer().hasPermission("build")) {
+        if(!Lobby.getBuild().contains(e.getPlayer())) {
             e.setCancelled(true);
         }
     }

@@ -22,28 +22,34 @@ public class NickCMD implements CommandExecutor {
             Player p = (Player) s;
 
             if(p.hasPermission("nick.nick")) {
-            if(!used.contains(p)) {
-                if (NickAPI.hasNick(p)) {
-                    NickAPI.removeNick(p);
-                    //Tablist.setPrefix(p);
-                    used.add(p);
+                if(NickAPI.isNickOnThisServer()) {
+                    if (!used.contains(p)) {
+                        if (NickAPI.hasNick(p)) {
+                            NickAPI.removeNick(p);
+                            //Tablist.setPrefix(p);
+                            used.add(p);
 
-                    Bukkit.getScheduler().runTaskLaterAsynchronously(ServerAPI.getInstance(), () -> used.remove(p), 20*3);
+                            Bukkit.getScheduler().runTaskLaterAsynchronously(ServerAPI.getInstance(), () -> used.remove(p), 20 * 3);
 
+                        } else {
+                            NickAPI.setRandomNick(p);
+                            //NickAPI.changeSkin(((CraftPlayer)p), p.getName());
+                            //Tablist.setPrefix(p);
+
+                            used.add(p);
+
+                            Bukkit.getScheduler().runTaskLaterAsynchronously(ServerAPI.getInstance(), () -> used.remove(p), 20 * 3);
+
+                        }
+
+                    } else {
+                        p.sendMessage(ServerAPI.getNickPrefix() + "§cWarte einen Moment§8, §cbefor du diesen §eCommand §cbenutzt");
+                        p.playSound(p.getLocation(), Sound.NOTE_BASS, 2F, 0.3F);
+                    }
                 } else {
-                    NickAPI.setRandomNick(p);
-                    //NickAPI.changeSkin(((CraftPlayer)p), p.getName());
-                    //Tablist.setPrefix(p);
-
-                    used.add(p);
-
-                    Bukkit.getScheduler().runTaskLaterAsynchronously(ServerAPI.getInstance(), () -> used.remove(p), 20*3);
-
+                    p.sendMessage(ServerAPI.getNickPrefix()+"§cAuf diesem Server ist das Nicken nicht erlaubt§8!");
+                    ServerAPI.getSoundManager().playBad(p);
                 }
-            } else {
-                p.sendMessage(ServerAPI.getNickPrefix()+"§cWarte einen Moment§8, §cbefor du diesen §eCommand §cbenutzt");
-                p.playSound(p.getLocation(), Sound.NOTE_BASS, 2F, 0.3F);
-            }
 
             } else {
                 p.sendMessage(ServerAPI.getNickPrefix()+"§cDazu hast du keine Rechte!");

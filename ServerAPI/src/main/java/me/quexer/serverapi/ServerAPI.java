@@ -1,6 +1,8 @@
 package me.quexer.serverapi;
 
 import me.quexer.serverapi.api.LocationAPI;
+import me.quexer.serverapi.coins.CoinsAPI;
+import me.quexer.serverapi.coins.CoinsCMD;
 import me.quexer.serverapi.manager.SoundManager;
 import me.quexer.serverapi.nick.NickAPI;
 import me.quexer.serverapi.nick.commands.NickCMD;
@@ -14,6 +16,9 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
@@ -52,6 +57,7 @@ public final class ServerAPI extends JavaPlugin {
                 "snikerfreak", "Snoxhzuni", "starklaw", "statiikfury", "Stimyz", "superfes", "sureynot", "sweenyb",
                 "tbrynner", "theSero", "Thijscream", "TheTwig", "tornmage", "tupitupa", "wildii", "Wondwi",
                 "WilliamBoo" ));
+        Bukkit.getMessenger().registerOutgoingPluginChannel(getInstance(), "BungeeCord");
 
     }
 
@@ -69,7 +75,7 @@ public final class ServerAPI extends JavaPlugin {
         initCommands();
         initStrings();
         initListeners();
-        setSoundManager(new SoundManager(Sound.CLICK, Sound.PISTON_EXTEND, Sound.WOOD_CLICK,
+        setSoundManager(new SoundManager(Sound.CHICKEN_EGG_POP, Sound.PISTON_EXTEND, Sound.LAVA_POP,
                                          Sound.LEVEL_UP, Sound.SUCCESSFUL_HIT, Sound.NOTE_PLING,
                                          Sound.NOTE_BASS, Sound.NOTE_BASS_DRUM, Sound.NOTE_SNARE_DRUM));
         initTables();
@@ -80,12 +86,26 @@ public final class ServerAPI extends JavaPlugin {
             Player all = (Player)var3.next();
             Tablist.setPrefix(all);
         }
-
+        ServerAPI.getMySQL().update("CREATE TABLE IF NOT EXISTS CoinsAPI(UUID VARCHAR(100), COINS VARCHAR(200))");
     }
     private void initTables() {
         Bukkit.getScheduler().runTaskAsynchronously(this, () ->{
         getMySQL().update("CREATE TABLE IF NOT EXISTS NICK(UUID VARCHAR(100), Ja VARCHAR(100))");
         });
+    }
+    public static void connect(String message, Player p) {
+        ByteArrayOutputStream b = new ByteArrayOutputStream();
+        DataOutputStream out = new DataOutputStream(b);
+
+        try {
+            out.writeUTF("connect");
+            out.writeUTF(message);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        p.sendPluginMessage(getInstance(), "BungeeCord", b.toByteArray());
     }
 
     private void initListeners() {
@@ -95,6 +115,8 @@ public final class ServerAPI extends JavaPlugin {
 
     private void initCommands() {
         Bukkit.getPluginCommand("nick").setExecutor(new NickCMD());
+        Bukkit.getPluginCommand("coins").setExecutor(new CoinsCMD());
+
     }
     private void initStrings() {
         setNickPrefix("§8✖ §5Nick §8§l➜ ");
